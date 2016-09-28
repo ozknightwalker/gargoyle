@@ -15,6 +15,8 @@ def foo(request):
     from django.http import HttpResponse
     return HttpResponse()
 
-urlpatterns = patterns('',
+
+urlpatterns = patterns(
+    '',
     url('', foo, name='gargoyle_test_foo'),
 )

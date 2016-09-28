@@ -7,23 +7,23 @@ import datetime
 import sys
 
 from django.conf import settings
-from django.contrib.auth.models import User, AnonymousUser
+from django.contrib.auth.models import (User, AnonymousUser)
 from django.core.cache import cache
 from django.core.management.base import CommandError
 from django.core.management import call_command
-from django.http import HttpRequest, Http404, HttpResponse
+from django.http import (HttpRequest, Http404, HttpResponse)
 from django.test import TestCase
-from django.template import Context, Template, TemplateSyntaxError
+from django.template import (Context, Template, TemplateSyntaxError)
 
 import gargoyle
-from gargoyle.builtins import IPAddressConditionSet, UserConditionSet, HostConditionSet
+from gargoyle.builtins import (
+    IPAddressConditionSet, UserConditionSet, HostConditionSet)
 from gargoyle.decorators import switch_is_active
 from gargoyle.helpers import MockRequest
-from gargoyle.models import Switch, SELECTIVE, DISABLED, GLOBAL, INHERIT
-from gargoyle.management.commands.add_switch import Command as AddSwitchCmd
+from gargoyle.models import (Switch, SELECTIVE, DISABLED, GLOBAL, INHERIT)
+from gargoyle.management.commands.add_switch import (Command as AddSwitchCmd)
 from gargoyle.management.commands.remove_switch import (
-    Command as RemoveSwitchCmd
-)
+    Command as RemoveSwitchCmd)
 from gargoyle.manager import SwitchManager
 from gargoyle.testutils import switches
 
@@ -34,8 +34,10 @@ class APITest(TestCase):
     urls = 'tests.urls'
 
     def setUp(self):
-        self.user = User.objects.create(username='foo', email='foo@example.com')
-        self.gargoyle = SwitchManager(Switch, key='key', value='value', instances=True, auto_create=True)
+        self.user = User.objects.create(
+            username='foo', email='foo@example.com')
+        self.gargoyle = SwitchManager(
+            Switch, key='key', value='value', instances=True, auto_create=True)
         self.gargoyle.register(UserConditionSet(User))
         self.gargoyle.register(IPAddressConditionSet())
         self.internal_ips = settings.INTERNAL_IPS
@@ -44,9 +46,12 @@ class APITest(TestCase):
         settings.INTERNAL_IPS = self.internal_ips
 
     def test_builtin_registration(self):
-        self.assertTrue('gargoyle.builtins.UserConditionSet(auth.user)' in self.gargoyle._registry)
-        self.assertTrue('gargoyle.builtins.IPAddressConditionSet' in self.gargoyle._registry)
-        self.assertEquals(len(list(self.gargoyle.get_condition_sets())), 2, self.gargoyle)
+        self.assertIn('gargoyle.builtins.UserConditionSet(auth.user)',
+                      self.gargoyle._registry)
+        self.assertIn('gargoyle.builtins.IPAddressConditionSet',
+                      self.gargoyle._registry)
+        self.assertEquals(
+            len(list(self.gargoyle.get_condition_sets())), 2, self.gargoyle)
 
     def test_user(self):
         condition_set = 'gargoyle.builtins.UserConditionSet(auth.user)'
@@ -92,7 +97,8 @@ class APITest(TestCase):
         self.assertTrue(self.gargoyle.is_active('test', user))
 
         # test with mock request
-        self.assertTrue(self.gargoyle.is_active('test', self.gargoyle.as_request(user=user)))
+        self.assertTrue(self.gargoyle.is_active(
+            'test', self.gargoyle.as_request(user=user)))
 
         # test date joined condition
         user = User(pk=8771)
@@ -328,7 +334,7 @@ class APITest(TestCase):
 
         response = test(request)
         self.assertTrue(response.status_code, 302)
-        self.assertTrue('Location' in response)
+        self.assertIn('Location', response)
         self.assertTrue(response['Location'], '/foo')
 
         @switch_is_active('test', redirect_to='gargoyle_test_foo')
@@ -337,7 +343,7 @@ class APITest(TestCase):
 
         response = test2(request)
         self.assertTrue(response.status_code, 302)
-        self.assertTrue('Location' in response)
+        self.assertIn('Location', response)
         self.assertTrue(response['Location'], '')
 
     def test_global(self):
@@ -373,11 +379,11 @@ class APITest(TestCase):
 
         switch = self.gargoyle['test']
 
-        self.assertTrue('test' in self.gargoyle)
+        self.assertIn('test', self.gargoyle)
 
         switch.delete()
 
-        self.assertFalse('test' in self.gargoyle)
+        self.assertNotIn('test', self.gargoyle)
 
     def test_expiration(self):
         switch = Switch.objects.create(key='test')
@@ -531,7 +537,8 @@ class APITest(TestCase):
         self.assertTrue(self.gargoyle.is_active('test', request))
 
         # test with mock request
-        self.assertTrue(self.gargoyle.is_active('test', self.gargoyle.as_request(ip_address='192.168.1.1')))
+        self.assertTrue(self.gargoyle.is_active(
+            'test', self.gargoyle.as_request(ip_address='192.168.1.1')))
 
         switch.clear_conditions(
             condition_set=condition_set,
@@ -543,7 +550,8 @@ class APITest(TestCase):
         )
         self.assertFalse(self.gargoyle.is_active('test', request))
 
-        self.assertTrue(self.gargoyle.is_active('test', self.gargoyle.as_request(ip_address='::1')))
+        self.assertTrue(self.gargoyle.is_active(
+            'test', self.gargoyle.as_request(ip_address='::1')))
 
         switch.clear_conditions(
             condition_set=condition_set,
@@ -574,27 +582,27 @@ class APITest(TestCase):
 
         result = switch.to_dict(self.gargoyle)
 
-        self.assertTrue('label' in result)
+        self.assertIn('label', result)
         self.assertEquals(result['label'], 'my switch')
 
-        self.assertTrue('status' in result)
+        self.assertIn('status', result)
         self.assertEquals(result['status'], SELECTIVE)
 
-        self.assertTrue('description' in result)
+        self.assertIn('description', result)
         self.assertEquals(result['description'], 'foo bar baz')
 
-        self.assertTrue('key' in result)
+        self.assertIn('key', result)
         self.assertEquals(result['key'], 'test')
 
-        self.assertTrue('conditions' in result)
+        self.assertIn('conditions', result)
         self.assertEquals(len(result['conditions']), 1)
 
         condition = result['conditions'][0]
-        self.assertTrue('id' in condition)
+        self.assertIn('id', condition)
         self.assertEquals(condition['id'], condition_set)
-        self.assertTrue('label' in condition)
+        self.assertIn('label', condition)
         self.assertEquals(condition['label'], 'IP Address')
-        self.assertTrue('conditions' in condition)
+        self.assertIn('conditions', condition)
         self.assertEquals(len(condition['conditions']), 1)
 
         inner_condition = condition['conditions'][0]
@@ -870,7 +878,8 @@ class APITest(TestCase):
 
 class ConstantTest(TestCase):
     def setUp(self):
-        self.gargoyle = SwitchManager(Switch, key='key', value='value', instances=True)
+        self.gargoyle = SwitchManager(
+            Switch, key='key', value='value', instances=True)
 
     def test_disabled(self):
         self.assertTrue(hasattr(self.gargoyle, 'DISABLED'))
@@ -895,7 +904,8 @@ class ConstantTest(TestCase):
 
 class MockRequestTest(TestCase):
     def setUp(self):
-        self.gargoyle = SwitchManager(Switch, key='key', value='value', instances=True)
+        self.gargoyle = SwitchManager(
+            Switch, key='key', value='value', instances=True)
 
     def test_empty_attrs(self):
         req = MockRequest()
@@ -926,8 +936,10 @@ class TemplateTagTest(TestCase):
     urls = 'tests.urls'
 
     def setUp(self):
-        self.user = User.objects.create(username='foo', email='foo@example.com')
-        self.gargoyle = SwitchManager(Switch, key='key', value='value', instances=True)
+        self.user = User.objects.create(
+            username='foo', email='foo@example.com')
+        self.gargoyle = SwitchManager(
+            Switch, key='key', value='value', instances=True)
         self.gargoyle.register(UserConditionSet(User))
 
     def test_simple(self):
@@ -944,7 +956,7 @@ class TemplateTagTest(TestCase):
         """)
         rendered = template.render(Context())
 
-        self.assertTrue('hello world!' in rendered)
+        self.assertIn('hello world!', rendered)
 
     def test_else(self):
         Switch.objects.create(
@@ -962,8 +974,8 @@ class TemplateTagTest(TestCase):
         """)
         rendered = template.render(Context())
 
-        self.assertTrue('foo bar baz' in rendered)
-        self.assertFalse('hello world!' in rendered)
+        self.assertIn('foo bar baz', rendered)
+        self.assertNotIn('hello world!', rendered)
 
     def test_with_request(self):
         condition_set = 'gargoyle.builtins.UserConditionSet(auth.user)'
@@ -993,8 +1005,8 @@ class TemplateTagTest(TestCase):
         """)
         rendered = template.render(Context({'request': request}))
 
-        self.assertFalse('foo bar baz' in rendered)
-        self.assertTrue('hello world!' in rendered)
+        self.assertNotIn('foo bar baz', rendered)
+        self.assertIn('hello world!', rendered)
 
     def test_missing_name(self):
         self.assertRaises(TemplateSyntaxError, Template, """
@@ -1033,13 +1045,14 @@ class TemplateTagTest(TestCase):
         """)
         rendered = template.render(Context({'request': request}))
 
-        self.assertFalse('foo bar baz' in rendered)
-        self.assertTrue('hello world!' in rendered)
+        self.assertNotIn('foo bar baz', rendered)
+        self.assertIn('hello world!', rendered)
 
 
 class HostConditionSetTest(TestCase):
     def setUp(self):
-        self.gargoyle = SwitchManager(Switch, key='key', value='value', instances=True, auto_create=True)
+        self.gargoyle = SwitchManager(
+            Switch, key='key', value='value', instances=True, auto_create=True)
         self.gargoyle.register(HostConditionSet())
 
     def test_simple(self):
@@ -1065,7 +1078,8 @@ class HostConditionSetTest(TestCase):
 
 class SwitchContextManagerTest(TestCase):
     def setUp(self):
-        self.gargoyle = SwitchManager(Switch, key='key', value='value', instances=True, auto_create=True)
+        self.gargoyle = SwitchManager(
+            Switch, key='key', value='value', instances=True, auto_create=True)
 
     def test_as_decorator(self):
         switch = self.gargoyle['test']
@@ -1109,7 +1123,8 @@ class SwitchContextManagerTest(TestCase):
 class CommandAddSwitchTestCase(TestCase):
 
     def setUp(self):
-        self.gargoyle = SwitchManager(Switch, key='key', value='value', instances=True, auto_create=True)
+        self.gargoyle = SwitchManager(
+            Switch, key='key', value='value', instances=True, auto_create=True)
 
     def test_requires_single_arg(self):
         too_few_too_many = [
@@ -1122,19 +1137,19 @@ class CommandAddSwitchTestCase(TestCase):
             self.assertRaises(CommandError, command.handle, *args)
 
     def test_add_switch_default_status(self):
-        self.assertFalse('switch_default' in self.gargoyle)
+        self.assertNotIn('switch_default', self.gargoyle)
 
         call_command('add_switch', 'switch_default')
 
-        self.assertTrue('switch_default' in self.gargoyle)
+        self.assertIn('switch_default', self.gargoyle)
         self.assertEqual(GLOBAL, self.gargoyle['switch_default'].status)
 
     def test_add_switch_with_status(self):
-        self.assertFalse('switch_disabled' in self.gargoyle)
+        self.assertNotIn('switch_disabled', self.gargoyle)
 
         call_command('add_switch', 'switch_disabled', status=DISABLED)
 
-        self.assertTrue('switch_disabled' in self.gargoyle)
+        self.assertIn('switch_disabled', self.gargoyle)
         self.assertEqual(DISABLED, self.gargoyle['switch_disabled'].status)
 
     def test_update_switch_status_disabled(self):
@@ -1157,7 +1172,8 @@ class CommandAddSwitchTestCase(TestCase):
 class CommandRemoveSwitchTestCase(TestCase):
 
     def setUp(self):
-        self.gargoyle = SwitchManager(Switch, key='key', value='value', instances=True, auto_create=True)
+        self.gargoyle = SwitchManager(
+            Switch, key='key', value='value', instances=True, auto_create=True)
 
     def test_requires_single_arg(self):
         too_few_too_many = [
@@ -1171,18 +1187,18 @@ class CommandRemoveSwitchTestCase(TestCase):
 
     def test_removes_switch(self):
         Switch.objects.create(key='test')
-        self.assertTrue('test' in self.gargoyle)
+        self.assertIn('test', self.gargoyle)
 
         call_command('remove_switch', 'test')
 
-        self.assertFalse('test' in self.gargoyle)
+        self.assertNotIn('test', self.gargoyle)
 
     def test_remove_non_switch_doesnt_error(self):
-        self.assertFalse('idontexist' in self.gargoyle)
+        self.assertNotIn('idontexist', self.gargoyle)
 
         call_command('remove_switch', 'idontexist')
 
-        self.assertFalse('idontexist' in self.gargoyle)
+        self.assertNotIn('idontexist', self.gargoyle)
 
 
 class HelpersTestCase(TestCase):
